@@ -273,7 +273,8 @@ class serendipity_event_multilingual extends serendipity_event
             return $false;
         }
 
-        while(list($key,) = each($properties)) {
+        
+        foreach ($properties as $key => $value) {
             preg_match('@^multilingual_body_(.+)$@', $key, $match);
             if (isset($match[1])) {
                 $titlelang = $properties['multilingual_title_' . $match[1]];
@@ -548,6 +549,7 @@ class serendipity_event_multilingual extends serendipity_event
                     break;
 
                 case 'entry_display':
+                    // TODO: DON'T KILL THE CACHE!!!
                     if (!is_array($eventData)) {
                         return false;
                     }
