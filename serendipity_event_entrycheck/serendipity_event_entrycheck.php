@@ -25,7 +25,7 @@ class serendipity_event_entrycheck extends serendipity_event
         $propbag->add('description',   PLUGIN_EVENT_ENTRYCHECK_DESC);
         $propbag->add('stackable',     false);
         $propbag->add('author',        'Garvin Hicking, Gregor Voeltz');
-        $propbag->add('version',       '1.16');
+        $propbag->add('version',       '1.16.1');
         $propbag->add('requirements',  array(
             'serendipity' => '0.8',
             'smarty'      => '2.6.7',
@@ -169,7 +169,12 @@ class serendipity_event_entrycheck extends serendipity_event
 
                         $owner = serendipity_fetchAuthor($locked['lock_owner']);
                         $link = '<a href="serendipity_admin.php?serendipity[action]=admin&amp;serendipity[adminModule]=entries&amp;serendipity[adminAction]=edit&amp;serendipity[id]=' . (int)$eventData['id'] . '&amp;serendipity[unlock]=true" class="serendipityPrettyButton">' . PLUGIN_EVENT_ENTRYCHECK_UNLOCK . '</a>';
-                        printf('<div class="entrylock">' . PLUGIN_EVENT_ENTRYCHECK_LOCKED . ' ' . $link . '</div>', $owner[0]['realname'], serendipity_strftime(DATE_FORMAT_SHORT, $locked['locked']));
+                        if (version_compare($serendipity['versionInstalled'], '2.4.alpha3' , '<')) {
+                            printf('<div class="entrylock">' . PLUGIN_EVENT_ENTRYCHECK_LOCKED . ' ' . $link . '</div>', $owner[0]['realname'], serendipity_strftime(DATE_FORMAT_SHORT, $locked['locked']));
+                        } else { 
+                            printf('<div class="entrylock">' . PLUGIN_EVENT_ENTRYCHECK_LOCKED . ' ' . $link . '</div>', $owner['realname'], serendipity_strftime(DATE_FORMAT_SHORT, $locked['locked']));
+                        }
+
                     }
 
                     return true;
