@@ -11,7 +11,7 @@ if (file_exists($probelang)) {
     include $probelang;
 }
 
-@define('PLUGIN_EVENT_PHOTOBLOG_VERSION', '1.6.1');
+@define('PLUGIN_EVENT_PHOTOBLOG_VERSION', '1.6.2');
 
 include dirname(__FILE__) . '/lang_en.inc.php';
 
@@ -70,7 +70,11 @@ class serendipity_event_photoblog extends serendipity_event
 
             }
             if ((float)$version < 1.2) {
-                $q   = "ALTER TABLE {$serendipity['dbPrefix']}photoblog ADD use_thumbnail {BOOLEAN};";
+                if (version_compare($serendipity['versionInstalled'], '2.4.alpha4' , '<')) {
+                    $q   = "ALTER TABLE {$serendipity['dbPrefix']}photoblog ADD use_thumbnail {BOOLEAN};";
+                } else {
+                    $q   = "ALTER TABLE {$serendipity['dbPrefix']}photoblog ADD use_thumbnail {BOOLEAN} NOT NULL DEFAULT 'true';";
+                }
                 $sql = serendipity_db_schema_import($q);
                 $q   = "UPDATE {$serendipity['dbPrefix']}photoblog SET use_thumbnail = '';";
                 serendipity_db_query($q);
