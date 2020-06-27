@@ -40,6 +40,12 @@ class serendipity_common_adduser {
                     continue;
                 }
                 $admin_cc[] = $admin['email'];
+                if (version_compare($serendipity['versionInstalled'], '2.4.alpha5' , '>')) {
+                    global $serendipity_langvar;
+                    $message .= "\n\n-- \n" . sprintf(
+                                                $serendipity_langvar[$serendipity['lang']]['SIGNATURE'], 
+                                                $serendipity['blogTitle'], '<https://s9y.org>');
+                }
                 serendipity_sendMail($admin['email'], $subject, $message, $email, null, $serendipity['blogTitle']);
             }
         }
@@ -49,6 +55,12 @@ class serendipity_common_adduser {
             $mail = true;
         } else {
             // Send out Mails to the actual receiver.
+            if (version_compare($serendipity['versionInstalled'], '2.4.alpha5' , '>')) {
+                global $serendipity_langvar;
+                $message .= "\n\n-- \n" . sprintf(
+                                            $serendipity_langvar[$serendipity['lang']]['SIGNATURE'], 
+                                            $serendipity['blogTitle'], '<https://s9y.org>');
+            }
             $mail = serendipity_sendMail($email, $subject, $message, $email, null, $serendipity['blogTitle']);
         }
 

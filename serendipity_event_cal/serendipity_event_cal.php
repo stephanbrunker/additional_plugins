@@ -1081,6 +1081,12 @@ class serendipity_event_cal extends serendipity_event {
         $text = $text . "\n" . '----'
               . "\n" . 'brought to you by S9y.org serendipity_event_cal plugin v.' . $serendipity['plugin_eventcal_version'];
 
+        if (version_compare($serendipity['versionInstalled'], '2.4.alpha5' , '>')) {
+            global $serendipity_langvar;
+            $text .= "\n\n-- \n" . sprintf(
+                                        $serendipity_langvar[$serendipity['lang']]['SIGNATURE'], 
+                                        $serendipity['blogTitle'], '<https://s9y.org>');
+        }
 
         if ($smail === true || $nolog === true) return serendipity_sendMail($to, $subject, $text, $fromEmail, null, $fromName);
         else return false;

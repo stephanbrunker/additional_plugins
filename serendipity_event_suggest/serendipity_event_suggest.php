@@ -150,6 +150,13 @@ class serendipity_event_suggest extends serendipity_event {
         );
         serendipity_db_insert('suggestmails', $db);
 
+        if (version_compare($serendipity['versionInstalled'], '2.4.alpha5' , '>')) {
+            global $serendipity_langvar;
+            $text .= "\n\n-- \n" . sprintf(
+                                        $serendipity_langvar[$serendipity['lang']]['SIGNATURE'], 
+                                        $serendipity['blogTitle'], '<https://s9y.org>');
+        }
+
         return serendipity_sendMail($to, $subject, $text, $serendipity['blogMail'], null, $serendipity['blogTitle']);
     }
 
@@ -275,7 +282,14 @@ class serendipity_event_suggest extends serendipity_event {
                     serendipity_db_query("UPDATE {$serendipity['dbPrefix']}suggestmails SET entry_id = " . (int)$id . "  WHERE id = " . (int)$res['id']);
                     $metaout = ob_get_contents();
                     ob_end_clean();
-                    serendipity_sendMail($this->get_config('email'), PLUGIN_SUGGEST_TITLE . ': ' . $res['title'], $res['article'], $serendipity['blogMail'], null, $serendipity['blog']);
+                    $text = $res['article'];
+                    if (version_compare($serendipity['versionInstalled'], '2.4.alpha3' , '>')) {
+                        global $serendipity_langvar;
+                        $text .= "\n\n-- \n" . sprintf(
+                                                    $serendipity_langvar[$serendipity['lang']]['SIGNATURE'], 
+                                                    $serendipity['blogTitle'], '<https://s9y.org>');
+                    }
+                    serendipity_sendMail($this->get_config('email'), PLUGIN_SUGGEST_TITLE . ': ' . $res['title'], $text, $serendipity['blogMail'], null, $serendipity['blog']);
                 }
             }
 
@@ -399,7 +413,14 @@ class serendipity_event_suggest extends serendipity_event {
                     }
 
                     //  CUSTOMIZE
-                    serendipity_sendMail($res['email'], PLUGIN_SUGGEST_TITLE, PLUGIN_SUGGEST_PUBLISHED, $serendipity['blogMail'], null, $serendipity['blog']);
+                    $text = PLUGIN_SUGGEST_PUBLISHED;
+                    if (version_compare($serendipity['versionInstalled'], '2.4.alpha3' , '>')) {
+                        global $serendipity_langvar;
+                        $text .= "\n\n-- \n" . sprintf(
+                                                    $serendipity_langvar[$serendipity['lang']]['SIGNATURE'], 
+                                                    $serendipity['blogTitle'], '<https://s9y.org>');
+                    }
+                    serendipity_sendMail($res['email'], PLUGIN_SUGGEST_TITLE, $text, $serendipity['blogMail'], null, $serendipity['blog']);
                     echo PLUGIN_SUGGEST_INFORM . "<br />\n";
 
                     serendipity_db_query("REPLACE INTO {$serendipity['dbPrefix']}entryproperties

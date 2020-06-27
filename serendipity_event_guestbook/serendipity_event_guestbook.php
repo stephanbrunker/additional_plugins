@@ -734,7 +734,14 @@ class serendipity_event_guestbook extends serendipity_event {
                 $body = str_replace(array('\r\n','\n'), "\n", $body); // without search = single and replace = double quotes, this won't work!!!
                 // does $serendipity['csuccess'] ever return to be moderate?
                 if (serendipity_db_bool($this->get_config('showapp')) === false && ($app == 0 || $serendipity['csuccess'] == 'moderate')) { $body = $body . sprintf(TEXT_EMAILMODERATE, $serendipity['moderate_reason']); }
-                return @serendipity_sendMail($this->get_config('targetmail'), TEXT_EMAILSUBJECT, sprintf(TEXT_EMAILTEXT,$name, $body, TEXT_EMAILFOOTER), $email, $headers, $name);
+                $bodymail = sprintf(TEXT_EMAILTEXT,$name, $body, TEXT_EMAILFOOTER);
+                if (version_compare($serendipity['versionInstalled'], '2.4.alpha5' , '>')) {
+                    global $serendipity_langvar;
+                    $bodymail .= "\n\n-- \n" . sprintf(
+                                                $serendipity_langvar[$serendipity['lang']]['SIGNATURE'], 
+                                                $serendipity['blogTitle'], '<https://s9y.org>');
+                }
+                return @serendipity_sendMail($this->get_config('targetmail'), TEXT_EMAILSUBJECT, $bodymail, $email, $headers, $name);
             }
             return true;
         }

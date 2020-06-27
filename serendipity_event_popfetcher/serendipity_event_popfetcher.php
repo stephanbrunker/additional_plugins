@@ -368,11 +368,16 @@ class serendipity_event_popfetcher extends serendipity_event
             $t             = serendipity_db_escape_string(isset($commentInfo['time']) ? $commentInfo['time'] : time());
             $referer       = substr((isset($_SESSION['HTTP_REFERER']) ? serendipity_db_escape_string($_SESSION['HTTP_REFERER']) : ''), 0, 200);
 
-            $query = "SELECT a.email, e.title, a.mail_comments, a.mail_trackbacks
-                     FROM {$serendipity['dbPrefix']}entries e, {$serendipity['dbPrefix']}authors a
+            $query = "SELECT a.email, c.value 'lang', e.title, a.mail_comments, a.mail_trackbacks
+                        FROM {$serendipity['dbPrefix']}entries AS e
+                     LEFT OUTER JOIN {$serendipity['dbPrefix']}authors AS a
+                                  ON a.authorid = e.authorid
+                     LEFT OUTER JOIN {$serendipity['dbPrefix']}config AS c
+                                  ON a.authorid = c.authorid
                      WHERE e.id  = '". (int)$id ."'
                        AND e.isdraft = 'false'
-                       AND e.authorid = a.authorid";
+                       AND a.name = 'lang'";
+
             if (!serendipity_db_bool($serendipity['showFutureEntries'])) {
                 $query .= " AND e.timestamp <= " . serendipity_db_time();
 
@@ -411,7 +416,11 @@ class serendipity_event_popfetcher extends serendipity_event
             if (serendipity_db_bool($ca['moderate_comments'])
                 || ($type == 'NORMAL' && serendipity_db_bool($row['mail_comments']))
                 || ($type == 'TRACKBACK' && serendipity_db_bool($row['mail_trackbacks']))) {
-                serendipity_sendComment($cid, $row['email'], $name, $email, $url, $id, $row['title'], $comments, $type, serendipity_db_bool($ca['moderate_comments']));
+                if (version_compare($serendipity['versionInstalled'], '2.4.alpha5' , '>')) {
+                    serendipity_sendComment($cid, $row['email'], $name, $email, $url, $id, $row['title'], $comments, $type, serendipity_db_bool($ca['moderate_comments']),'', $row['lang']);
+                } else {
+                    serendipity_sendComment($cid, $row['email'], $name, $email, $url, $id, $row['title'], $comments, $type, serendipity_db_bool($ca['moderate_comments']));
+                }
             }
 
             serendipity_approveComment($cid, $id, true);

@@ -129,7 +129,14 @@ class serendipity_event_commentedit extends serendipity_event
                                 serendipity_plugin_api::hook_event('frontend_display', $data);
                                 //send mail with edit-notification to blogowner, only if normal notification is enabled and config, too
                                 if ($serendipity['mail_comments'] == 1 && $mail) {
-                                    serendipity_sendMail($serendipity['email'], 'Comment ' . $comment_id . ' edited' , 'New comment: ' . $comment, $serendipity['blogMail']);
+                                    $body = 'New comment: ' . $comment;
+                                    if (version_compare($serendipity['versionInstalled'], '2.4.alpha5' , '>')) {
+                                        global $serendipity_langvar;
+                                        $body .= "\n\n-- \n" . sprintf(
+                                            $serendipity_langvar[$serendipity['lang']]['SIGNATURE'], 
+                                            $serendipity['blogTitle'], '<https://s9y.org>');
+                                    }
+                                    serendipity_sendMail($serendipity['email'], 'Comment ' . $comment_id . ' edited' , $body, $serendipity['blogMail']);
                                 }
                                 echo $data['comment'];
                             }

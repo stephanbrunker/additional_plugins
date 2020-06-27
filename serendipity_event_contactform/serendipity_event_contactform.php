@@ -211,7 +211,12 @@ class serendipity_event_contactform extends serendipity_event {
         // reset encoded quotes for text and subject
         $subject = str_replace('&quot;', '"', $subject);
         $text    = str_replace('&quot;', '"', $text);
-
+        if (version_compare($serendipity['versionInstalled'], '2.4.alpha5' , '>')) {
+            global $serendipity_langvar;
+            $text .= "\n\n-- \n" . sprintf(
+                                        $serendipity_langvar[$serendipity['lang']]['SIGNATURE'], 
+                                        $serendipity['blogTitle'], '<https://s9y.org>');
+        }
         return serendipity_sendMail($to, $subject, $text, $fromEmail, null, $fromName);
     }
 

@@ -138,7 +138,14 @@ class serendipity_event_forgotpassword extends serendipity_event
                                 $eventData['footer'] = '<div class="serendipityAdminMsgError"><img style="width: 22px; height: 22px; border: 0px; padding-right: 4px; vertical-align: middle" src="' . serendipity_getTemplateFile('admin/img/admin_msg_error.png') . '" alt="" />' . $this->get_config('nomailinfo') . '</div>';
                                 
                                 if ($this->get_config('nomailadd') != '') {
-                                    $sent = serendipity_sendMail($this->get_config('nomailadd'), PLUGIN_EVENT_FORGOTPASSWORD_EMAIL_SUBJECT, sprintf($this->get_config('nomailtxt'), $_POST['username']), NULL);
+                                    $body = sprintf($this->get_config('nomailtxt');
+                                    if (version_compare($serendipity['versionInstalled'], '2.4.alpha5' , '>')) {
+                                        global $serendipity_langvar;
+                                        $body .= "\n\n-- \n" . sprintf(
+                                                    $serendipity_langvar[$serendipity['lang']]['SIGNATURE'], 
+                                                    $serendipity['blogTitle'], '<https://s9y.org>');
+                                    }
+                                    $sent = serendipity_sendMail($this->get_config('nomailadd'), PLUGIN_EVENT_FORGOTPASSWORD_EMAIL_SUBJECT, $body, $_POST['username']), NULL);
                                 }
                                 return true;
                             }
@@ -161,7 +168,15 @@ class serendipity_event_forgotpassword extends serendipity_event
                                 return true;
                             }
 
-                            $sent = serendipity_sendMail($email, PLUGIN_EVENT_FORGOTPASSWORD_EMAIL_SUBJECT, PLUGIN_EVENT_FORGOTPASSWORD_EMAIL_BODY.$serendipity['baseURL'].'serendipity_admin.php?username='.$authorid.'&uid='.$md5, NULL);
+                            $body = PLUGIN_EVENT_FORGOTPASSWORD_EMAIL_BODY.$serendipity['baseURL'].'serendipity_admin.php?username='.$authorid.'&uid='.$md5;
+                            if (version_compare($serendipity['versionInstalled'], '2.4.alpha3' , '>')) {
+                                global $serendipity_langvar;
+                                $body .= "\n\n-- \n" . sprintf(
+                                                            $serendipity_langvar[$serendipity['lang']]['SIGNATURE'], 
+                                                            $serendipity['blogTitle'], '<https://s9y.org>');
+                            }
+
+                            $sent = serendipity_sendMail($email, PLUGIN_EVENT_FORGOTPASSWORD_EMAIL_SUBJECT, $body, NULL);
                             if ($sent) {
                                 $eventData['footer'] = '
                                 <table cellspacing="10" cellpadding="0" border="0" align="center">
