@@ -42,7 +42,7 @@ class serendipity_event_spamblock_bayes extends serendipity_event {
 		$this->title = PLUGIN_EVENT_SPAMBLOCK_BAYES_NAME;
 		$propbag->add ( 'description', PLUGIN_EVENT_SPAMBLOCK_BAYES_DESC);
 		$propbag->add ( 'name', $this->title);
-		$propbag->add ( 'version', '0.5.7' );
+		$propbag->add ( 'version', '0.5.8' );
 		$propbag->add ( 'event_hooks', array ('frontend_saveComment' => true,
 		                                     'backend_spamblock_comments_shown' => true,
 		                                     'external_plugin' => true,
@@ -729,7 +729,11 @@ class serendipity_event_spamblock_bayes extends serendipity_event {
 
                                 //Ham shall be approved, Spam deleted
                                 if ($category == 'ham') {
-                                    serendipity_approveComment($id, $entry_id);
+                                    if (version_compare($serendipity['versionInstalled'], '2.4.alpha4' , '<')) {
+                                        serendipity_approveComment($id, $entry_id);
+                                    } else {
+                                        serendipity_approveComment($id);
+                                    }
                                 } elseif  ($category == 'spam') {
                                     if($this->get_config('method', 'moderate') == 'custom') {
                                         $spamBarrier = min(array(
@@ -750,10 +754,14 @@ class serendipity_event_spamblock_bayes extends serendipity_event {
                                     if ($this->get_config('recycler', true)) {
                                         $this->recycleComment($id, $entry_id);
                                     }
-                                    serendipity_deleteComment($id, $entry_id);
+                                    if (version_compare($serendipity['versionInstalled'], '2.4.alpha4' , '<')) {
+                                        serendipity_deleteComment($id, $entry_id);
+                                    } else {
+                                        serendipity_deleteComment($id);
+                                    }
                                 }
                             }
-							break;
+                            break;
                         case 'spamblock_bayes.load.gif':
                             header('Content-Type: image/gif');
                             echo file_get_contents(dirname(__FILE__). '/img/spamblock_bayes.load.gif');
@@ -1386,16 +1394,26 @@ class serendipity_event_spamblock_bayes extends serendipity_event {
                     if ($this->get_config('recycler', true)) {
                         $this->recycleComment($comment_id, $entry_id);
                     }
-                    serendipity_deleteComment($comment_id, $entry_id);
- 				    return true;
- 					break;
+                    if (version_compare($serendipity['versionInstalled'], '2.4.alpha4' , '<')) {
+                        serendipity_deleteComment($comment_id, $entry_id);
+                    } else {
+                        serendipity_deleteComment($comment_id);
+                    }
+                    return true;
+                    break;
 
                 case 'xmlrpc_comment_ham':
                     $this->startLearn($eventData, 'ham');
                     $comment_id = $addData['cid'];
                     $entry_id = $addData['id'];
                     //moderated ham-comments should be instantly approved, that's why they need an id:
-                    serendipity_approveComment($comment_id, $entry_id);
+                    
+                    if (version_compare($serendipity['versionInstalled'], '2.4.alpha4' , '<')) {
+                        serendipity_approveComment($comment_id, $entry_id);
+                    } else {
+                        serendipity_approveComment($comment_id);
+                    }
+
 				    return true;
 					break;
 
@@ -1638,11 +1656,18 @@ class serendipity_event_spamblock_bayes extends serendipity_event {
 
 
 
-
-        if ($action == 'delete') {
-            serendipity_deleteComment($id, $entry_id, 'comment', $token);
-        } else if ($action == 'approve') {
-            serendipity_approveComment($id, $entry_id, 'comment', $token);
+        if (version_compare($serendipity['versionInstalled'], '2.4.alpha4' , '<')) {
+            if ($action == 'delete') {
+                serendipity_deleteComment($id, $entry_id, 'comment', $token);
+            } else if ($action == 'approve') {
+                serendipity_approveComment($id, $entry_id, 'comment', $token); // this is wrong anyway ... 3rd argument was force and 4th moderate
+            }
+        } else {
+            if ($action == 'delete') {
+                serendipity_deleteComment($id, $token);
+            } else if ($action == 'approve') {
+                serendipity_approveComment($id, false, false, $token);
+            }
         }
     }
 

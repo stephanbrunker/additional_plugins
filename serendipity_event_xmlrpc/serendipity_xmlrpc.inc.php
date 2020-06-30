@@ -706,10 +706,14 @@ function wp_deleteComment($message) {
     $val = $message->params[3];
     $comment_id =  $val->getval();
     if (!empty($comment_id)) {
-        // We need the entryid, so fetch it:
-        $sql = serendipity_db_query("SELECT entry_id FROM {$serendipity['dbPrefix']}comments WHERE id = ". $comment_id, true);
-        $entry_id = $sql['entry_id'];
-        $result = serendipity_deleteComment($comment_id, $entry_id);
+        if (version_compare($serendipity['versionInstalled'], '2.4.alpha4' , '<')) {
+            // We need the entryid, so fetch it:
+            $sql = serendipity_db_query("SELECT entry_id FROM {$serendipity['dbPrefix']}comments WHERE id = ". $comment_id, true);
+            $entry_id = $sql['entry_id'];
+            $result = serendipity_deleteComment($comment_id, $entry_id);
+        } else {
+            $result = serendipity_deleteComment($comment_id);
+        }
     }
     else {
         $result = false;
@@ -770,7 +774,12 @@ function wp_editComment($message) {
             if ($result) {
                 $rpc_comment_status = $rpccomment['status'];
                 $moderate_comment = $rpc_comment_status !== 'approve' && $rpc_comment_status !== 'approved';
-                $result = !serendipity_approveComment($comment_id, $entry_id, false, $moderate_comment) == $moderate_comment;
+                if (version_compare($serendipity['versionInstalled'], '2.4.alpha4' , '<')) {
+                    $result = !serendipity_approveComment($comment_id, $entry_id, false, $moderate_comment) == $moderate_comment;
+                } else {
+                    $result = !serendipity_approveComment($comment_id, false, $moderate_comment) == $moderate_comment;
+                }
+                
                 if ($result || $rpc_comment_status=='spam') {
                     $result = true; 
                     $addData['id'] = $entry_id;

@@ -23,7 +23,7 @@ class serendipity_event_dsgvo_gdpr extends serendipity_event
         $propbag->add('description',   PLUGIN_EVENT_DSGVO_GDPR_DESC);
         $propbag->add('stackable',     false);
         $propbag->add('author',        'Serendipity Team');
-        $propbag->add('version', '1.3');
+        $propbag->add('version', '1.4');
         $propbag->add('requirements',  array(
             'serendipity' => '2.0',
             'smarty'      => '2.6.7',
@@ -402,7 +402,11 @@ class serendipity_event_dsgvo_gdpr extends serendipity_event
                 if (isset($serendipity['POST']['delete'])) {
                     foreach($clist AS $comment) {
                         echo '<p>' . sprintf(COMMENT_DELETED, $comment['id']) . '</p>';
-                        serendipity_deleteComment($comment['id'], $comment['entry_id']);
+                        if (version_compare($serendipity['versionInstalled'], '2.4.alpha4' , '<')) {
+                            serendipity_deleteComment($comment['id'], $comment['entry_id']);
+                        } else {
+                            serendipity_deleteComment($comment['id']);
+                        }
                     }
                 }
 

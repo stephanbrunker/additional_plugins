@@ -1,4 +1,6 @@
 # 
+Version 1.60.3
+    * Adapt to 2.4.alpha4 changes in approveComment and deleteComment functions
 Version 1.60.2
     * Adapt to 2.4.alpha3 changes in comments table
 Version 1.60:

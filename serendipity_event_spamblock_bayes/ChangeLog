@@ -1,3 +1,5 @@
+0.5.8: Adapt to 2.4.alpha4 changes in approveComment and deleteComment function
+
 0.5.7: Adapt to 2.4.alpha3 changes in comments table
 
 0.5.6: fix possible SQL exposure in email field of comment
