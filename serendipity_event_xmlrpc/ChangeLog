@@ -1,4 +1,6 @@
 # 
+Version 1.60.2
+    * Adapt to 2.4.alpha3 changes in comments table
 Version 1.60:
     * Added stub wp.getProfile dummy API function
 

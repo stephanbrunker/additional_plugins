@@ -16,7 +16,7 @@ class serendipity_event_statistics extends serendipity_event
         $propbag->add('description',   PLUGIN_EVENT_STATISTICS_DESC);
         $propbag->add('stackable',     false);
         $propbag->add('author',        'Arnan de Gans, Garvin Hicking, Fredrik Sandberg, kalkin, Matthias Mees, Ian');
-        $propbag->add('version',       '1.65');
+        $propbag->add('version',       '1.66');
         $propbag->add('requirements',  array(
             'serendipity' => '1.6',
             'smarty'      => '2.6.7',
@@ -312,15 +312,25 @@ class serendipity_event_statistics extends serendipity_event
                         $image_count = serendipity_db_query("SELECT count(id) FROM {$serendipity['dbPrefix']}images", true);
                         $image_rows  = serendipity_db_query("SELECT extension, count(id) AS images FROM {$serendipity['dbPrefix']}images GROUP BY extension ORDER BY images DESC");
 
-                        $subscriber_count = count(serendipity_db_query("SELECT count(id) FROM {$serendipity['dbPrefix']}comments WHERE type = 'NORMAL' AND subscribed = 'true' GROUP BY email"));
-                        $subscriber_rows  = serendipity_db_query("SELECT e.timestamp, e.id, e.title, count(c.id) as postings
-                                                        FROM {$serendipity['dbPrefix']}comments c,
-                                                             {$serendipity['dbPrefix']}entries e
-                                                        WHERE e.id = c.entry_id AND type = 'NORMAL' AND subscribed = 'true'
-                                                        GROUP BY e.id, c.email, e.title, e.timestamp
-                                                        ORDER BY postings DESC
-                                                        LIMIT $max_items");
-
+                        if (version_compare($serendipity['versionInstalled'], '2.4.alpha3' , '<')) {
+                            $subscriber_count = count(serendipity_db_query("SELECT count(id) FROM {$serendipity['dbPrefix']}comments WHERE type = 'NORMAL' AND subscribed = 'true' GROUP BY email"));
+                            $subscriber_rows  = serendipity_db_query("SELECT e.timestamp, e.id, e.title, count(c.id) as postings
+                                                            FROM {$serendipity['dbPrefix']}comments c,
+                                                                 {$serendipity['dbPrefix']}entries e
+                                                            WHERE e.id = c.entry_id AND type = 'NORMAL' AND subscribed = 'true'
+                                                            GROUP BY e.id, c.email, e.title, e.timestamp
+                                                            ORDER BY postings DESC
+                                                            LIMIT $max_items");
+                        } else {
+                            $subscriber_count = count(serendipity_db_query("SELECT count(id) FROM {$serendipity['dbPrefix']}subscriptions WHERE type = 'entry' AND subscribed = 'true' GROUP BY email"));
+                            $subscriber_rows  = serendipity_db_query("SELECT e.timestamp, e.id, e.title, count(s.id) as postings
+                                                            FROM {$serendipity['dbPrefix']}subscriptions s,
+                                                                 {$serendipity['dbPrefix']}entries e
+                                                            WHERE e.id = s.target_id AND s.type = 'entry' AND s.subscribed = 'true'
+                                                            GROUP BY e.id, s.email, e.title, e.timestamp
+                                                            ORDER BY postings DESC
+                                                            LIMIT $max_items");
+                        }
                         $comment_count = serendipity_db_query("SELECT count(id) FROM {$serendipity['dbPrefix']}comments WHERE type = 'NORMAL'", true);
                         $comment_rows  = serendipity_db_query("SELECT e.timestamp, e.id, e.title, count(c.id) as postings
                                                         FROM {$serendipity['dbPrefix']}comments c,

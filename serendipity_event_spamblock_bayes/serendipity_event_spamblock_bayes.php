@@ -42,7 +42,7 @@ class serendipity_event_spamblock_bayes extends serendipity_event {
 		$this->title = PLUGIN_EVENT_SPAMBLOCK_BAYES_NAME;
 		$propbag->add ( 'description', PLUGIN_EVENT_SPAMBLOCK_BAYES_DESC);
 		$propbag->add ( 'name', $this->title);
-		$propbag->add ( 'version', '0.5.6' );
+		$propbag->add ( 'version', '0.5.7' );
 		$propbag->add ( 'event_hooks', array ('frontend_saveComment' => true,
 		                                     'backend_spamblock_comments_shown' => true,
 		                                     'external_plugin' => true,
@@ -1748,15 +1748,27 @@ class serendipity_event_spamblock_bayes extends serendipity_event {
         $id            = (int)$ca['id'];
         $type          = $commentInfo['type'];
         $email         = serendipity_db_escape_string($commentInfo['email']);
-        if (isset($commentInfo['subscribe'])) {
-            if (!isset($serendipity['allowSubscriptionsOptIn']) || $serendipity['allowSubscriptionsOptIn']) {
-                $subscribe = 'false';
+        
+        if (version_compare($serendipity['versionInstalled'], '2.4.alpha3' , '<')) {
+            if (isset($commentInfo['subscribe'])) {
+                if (!isset($serendipity['allowSubscriptionsOptIn']) || $serendipity['allowSubscriptionsOptIn']) {
+                    $subscribe = 'false';
+                } else {
+                    $subscribe = 'true';
+                }
             } else {
-                $subscribe = 'true';
+                $subscribe = 'false';
             }
         } else {
-            $subscribe = 'false';
+            if (isset($commentInfo['subscribe'])) {
+                if (!isset($serendipity['allowSubscriptionsOptIn']) || $serendipity['allowSubscriptionsOptIn']) {
+                    serendipity_sendConfirmationMail($commentInfo['email'], 'entry', $id);
+                } else {
+                    serendipity_subscription($commentInfo['email'], 'entry', $id);
+                }
+            }
         }
+
         //'approved' cause only relevant after recovery
         $dbstatus = 'approved';
 
@@ -1771,19 +1783,24 @@ class serendipity_event_spamblock_bayes extends serendipity_event {
         $t             = serendipity_db_escape_string(isset($commentInfo['time']) ? $commentInfo['time'] : time());
         $referer       = substr((isset($_SESSION['HTTP_REFERER']) ? serendipity_db_escape_string($_SESSION['HTTP_REFERER']) : ''), 0, 200);
 
-        $sql  = "INSERT INTO
-                    {$serendipity['dbPrefix']}spamblock_bayes_recycler (entry_id, parent_id, ip, author, email, url, body, type, timestamp, title, subscribed, status, referer)
-                    VALUES ('$id', '$parentid', '$ip', '$name', '$email', '$url', '$commentsFixed', '$type', '$t', '$title', '$subscribe', '$dbstatus', '$referer')";
-
+        if (version_compare($serendipity['versionInstalled'], '2.4.alpha3' , '<')) {
+            $sql  = "INSERT INTO
+                        {$serendipity['dbPrefix']}spamblock_bayes_recycler (entry_id, parent_id, ip, author, email, url, body, type, timestamp, title, subscribed, status, referer)
+                        VALUES ('$id', '$parentid', '$ip', '$name', '$email', '$url', '$commentsFixed', '$type', '$t', '$title', '$subscribe', '$dbstatus', '$referer')";
+        } else {
+            $sql  = "INSERT INTO
+                        {$serendipity['dbPrefix']}spamblock_bayes_recycler (entry_id, parent_id, ip, author, email, url, body, type, timestamp, title, status, referer)
+                        VALUES ('$id', '$parentid', '$ip', '$name', '$email', '$url', '$commentsFixed', '$type', '$t', '$title', '$dbstatus', '$referer')";
+        }
         serendipity_db_query($sql);
     }
 
     function recycleComment($id, $entry_id) {
         global $serendipity;
         $sql  = "INSERT INTO
-                    {$serendipity['dbPrefix']}spamblock_bayes_recycler (entry_id, parent_id, ip, author, email, url, body, type, timestamp, title, subscribed, status, referer)
+                    {$serendipity['dbPrefix']}spamblock_bayes_recycler (entry_id, parent_id, ip, author, email, url, body, type, timestamp, title, status, referer)
                         SELECT
-                            entry_id, parent_id, ip, author, email, url, body, type, timestamp, title, subscribed, status, referer
+                            entry_id, parent_id, ip, author, email, url, body, type, timestamp, title, status, referer
                         FROM
                             {$serendipity['dbPrefix']}comments
                         WHERE
@@ -1799,18 +1816,18 @@ class serendipity_event_spamblock_bayes extends serendipity_event {
         if (is_array($ids)) {
             $sql = "INSERT INTO
                     {$serendipity['dbPrefix']}comments
-                    (entry_id, parent_id, ip, author, email, url, body, type, timestamp, title, subscribed, status, referer)
+                    (entry_id, parent_id, ip, author, email, url, body, type, timestamp, title, status, referer)
                     SELECT
-                    entry_id, parent_id, ip, author, email, url, body, type, timestamp, title, subscribed, status, referer
+                    entry_id, parent_id, ip, author, email, url, body, type, timestamp, title, status, referer
                     FROM
                     {$serendipity['dbPrefix']}spamblock_bayes_recycler
                     WHERE " . serendipity_db_in_sql ( 'id', $ids );
         } else {
             $sql = "INSERT INTO
                     {$serendipity['dbPrefix']}comments
-                    (entry_id, parent_id, ip, author, email, url, body, type, timestamp, title, subscribed, status, referer)
+                    (entry_id, parent_id, ip, author, email, url, body, type, timestamp, title, status, referer)
                     SELECT
-                    entry_id, parent_id, ip, author, email, url, body, type, timestamp, title, subscribed, status, referer
+                    entry_id, parent_id, ip, author, email, url, body, type, timestamp, title, status, referer
                     FROM
                     {$serendipity['dbPrefix']}spamblock_bayes_recycler
                     WHERE id = " . (int)$ids;

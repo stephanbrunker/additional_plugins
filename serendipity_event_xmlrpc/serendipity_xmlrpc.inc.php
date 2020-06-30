@@ -587,21 +587,42 @@ function wp_getComment($message) {
     
     $val = $message->params[3];
     $comment_id =  $val->getval();
-    $query = "SELECT
-                    co.id,
-                    co.entry_id, co.timestamp, co.title AS ctitle, co.email, co.url, co.ip, co.body, co.type, co.subscribed,
-                    co.author,
-                    e.title,
-                    e.timestamp AS entrytimestamp,
-                    e.id AS entryid,
-                    e.authorid,
-                    co.id AS commentid,
-                    co.parent_id AS parent_id,
-                    co.status
-              FROM
-                    {$serendipity['dbPrefix']}comments AS co
-                    LEFT JOIN {$serendipity['dbPrefix']}entries AS e ON (co.entry_id = e.id)
-              WHERE co.id=$comment_id";
+
+    if (version_compare($serendipity['versionInstalled'], '2.4.alpha3' , '<')) {
+        $query = "SELECT
+                        co.id,
+                        co.entry_id, co.timestamp, co.title AS ctitle, co.email, co.url, co.ip, co.body, co.type, co.subscribed,
+                        co.author,
+                        e.title,
+                        e.timestamp AS entrytimestamp,
+                        e.id AS entryid,
+                        e.authorid,
+                        co.id AS commentid,
+                        co.parent_id AS parent_id,
+                        co.status
+                  FROM
+                        {$serendipity['dbPrefix']}comments AS co
+                        LEFT JOIN {$serendipity['dbPrefix']}entries AS e ON (co.entry_id = e.id)
+                  WHERE co.id=$comment_id";
+    } else {
+        $query = "SELECT
+                        co.id,
+                        co.entry_id, co.timestamp, co.title AS ctitle, co.email, co.url, co.ip, co.body, co.type, s.subscribed,
+                        co.author,
+                        e.title,
+                        e.timestamp AS entrytimestamp,
+                        e.id AS entryid,
+                        e.authorid,
+                        co.id AS commentid,
+                        co.parent_id AS parent_id,
+                        co.status
+                  FROM
+                        {$serendipity['dbPrefix']}comments AS co
+                        LEFT JOIN {$serendipity['dbPrefix']}entries AS e ON (co.entry_id = e.id)
+                        LEFT JOIN {$serendipity['dbPrefix']}subscriptions AS s ON (s.target_id = e.id AND s.type = 'entry')
+                  WHERE co.id=$comment_id";
+    }
+
     $entry = serendipity_db_query($query, true, 'assoc');
     if ($entry['commentid']) {
         return new XML_RPC_Response(_wp_createSingleCommentResult($entry));

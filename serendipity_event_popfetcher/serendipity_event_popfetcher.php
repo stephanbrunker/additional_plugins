@@ -12,7 +12,7 @@ require_once('tmobile.php');
 require_once('o2.php');
 
 // Default values
-define('POPFETCHER_VERSION',  '1.49');       // This version of Popfetcher
+define('POPFETCHER_VERSION',  '1.50');       // This version of Popfetcher
 define('DEFAULT_ADMINMENU',   'true');       // True if run as sidebar plugin. False if external plugin.
 define('DEFAULT_HIDENAME',    'popfetcher'); // User should set this to something unguessable
 define('DEFAULT_MAILSERVER',  '');
@@ -384,16 +384,27 @@ class serendipity_event_popfetcher extends serendipity_event
                 return false;
             }
 
-            if (isset($commentInfo['subscribe'])) {
-                $subscribe = 'true';
+            if (version_compare($serendipity['versionInstalled'], '2.4.alpha3' , '<')) {
+                if (isset($commentInfo['subscribe'])) {
+                    $subscribe = 'true';
+                } else {
+                    $subscribe = 'false';
+                }
+
+                $query  = "INSERT INTO {$serendipity['dbPrefix']}comments (entry_id, parent_id, ip, author, email, url, body, type, timestamp, title, subscribed, status, referer)";
+                $query .= " VALUES ('". (int)$id ."', '$parentid', '$ip', '$name', '$email', '$url', '$commentsFixed', '$type', '$t', '$title', '$subscribe', '$status', '$referer')";
+                serendipity_db_query($query);
             } else {
-                $subscribe = 'false';
+                $query  = "INSERT INTO {$serendipity['dbPrefix']}comments (entry_id, parent_id, ip, author, email, url, body, type, timestamp, title, status, referer)";
+                $query .= " VALUES ('". (int)$id ."', '$parentid', '$ip', '$name', '$email', '$url', '$commentsFixed', '$type', '$t', '$title', '$status', '$referer')";
+
+                serendipity_db_query($query);
+
+                if (isset($commentInfo['subscribe'])) {
+                    serendipity_subscription($email, 'entry', (int)$id);
+                } 
             }
 
-            $query  = "INSERT INTO {$serendipity['dbPrefix']}comments (entry_id, parent_id, ip, author, email, url, body, type, timestamp, title, subscribed, status, referer)";
-            $query .= " VALUES ('". (int)$id ."', '$parentid', '$ip', '$name', '$email', '$url', '$commentsFixed', '$type', '$t', '$title', '$subscribe', '$status', '$referer')";
-
-            serendipity_db_query($query);
             $cid = serendipity_db_insert_id('comments', 'id');
 
             // Send mail to the author if he chose to receive these mails, or if the comment is awaiting moderation

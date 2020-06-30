@@ -1,3 +1,5 @@
+1.66: Adapt to 2.4.alpha3 changes in comments table, TODO: new subscriptions
+      from subscriptions table
 1.65: Added legal gdpr/dsgvo info
 1.63: Restrict sql index key length for utf8mb4 migration
 1.62: Iconfont a11y fix (yellowled)

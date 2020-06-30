@@ -53,7 +53,7 @@ class serendipity_event_forum extends serendipity_event {
             'php'         => '4.1.0'
         ));
 
-        $propbag->add('version',       '0.38.5');
+        $propbag->add('version',       '0.38.6');
         $propbag->add('author',       'Alexander \'dma147\' Mieland');
         $propbag->add('stackable',     false);
         $propbag->add('event_hooks',   array(
@@ -2765,8 +2765,14 @@ class serendipity_event_forum extends serendipity_event {
                     $c = serendipity_db_query("SELECT comments FROM {$serendipity['dbPrefix']}entries WHERE id = " . (int)$eventData['id'], true, 'assoc');
 
                     if ($c['comments'] < 1) {
-                        serendipity_db_query("INSERT INTO {$serendipity['dbPrefix']}comments (entry_id, title, url, type, status, subscribed)
+                        if (version_compare($serendipity['versionInstalled'], '2.4.alpha3' , '<')) {
+                            serendipity_db_query("INSERT INTO {$serendipity['dbPrefix']}comments (entry_id, title, url, type, status, subscribed)
                                                    VALUES (" . (int)$eventData['id'] . ", 'phpbb_mirror', '" . serendipity_db_escape_string($phpbb_url) . "', 'NORMAL', 'approved', 'false')");
+
+                        } else {
+                            serendipity_db_query("INSERT INTO {$serendipity['dbPrefix']}comments (entry_id, title, url, type, status)
+                                                   VALUES (" . (int)$eventData['id'] . ", 'phpbb_mirror', '" . serendipity_db_escape_string($phpbb_url) . "', 'NORMAL', 'approved')");
+                        }
                     }
                     serendipity_db_query("UPDATE {$serendipity['dbPrefix']}entries SET comments = comments + 1 WHERE id = " . (int)$eventData['id']);
                     header('Status: 302 Found');
