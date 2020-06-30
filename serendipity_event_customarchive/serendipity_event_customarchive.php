@@ -91,10 +91,10 @@ class serendipity_event_customarchive extends serendipity_event {
 
         $propbag->add('name', PLUGIN_CUSTOMARCHIVE_TITLE);
         $propbag->add('description', PLUGIN_CUSTOMARCHIVE_TITLE_BLAHBLAH);
-        $propbag->add('event_hooks',  array('entries_header' => true, 'entry_display' => true, 'genpage' => true));
+        $propbag->add('event_hooks',  array('entries_header' => true, 'entry_display' => true, 'genpage' => true, 'frontend_fetchentries' => true));
         $propbag->add('configuration', array('permalink', 'pagetitle', 'articleformat'));
         $propbag->add('author', 'Garvin Hicking');
-        $propbag->add('version', '1.12.2');
+        $propbag->add('version', '1.13');
         $propbag->add('requirements',  array(
             'serendipity' => '0.8',
             'smarty'      => '2.6.7',
@@ -102,6 +102,7 @@ class serendipity_event_customarchive extends serendipity_event {
         ));
         $propbag->add('stackable', false);
         $propbag->add('groups', array('FRONTEND_ENTRY_RELATED'));
+        $this->dependencies = array('serendipity_plugin_customarchive' => 'remove');
     }
 
     function introspect_config_item($name, &$propbag)
@@ -114,8 +115,8 @@ class serendipity_event_customarchive extends serendipity_event {
                 $propbag->add('name',        PLUGIN_CUSTOMARCHIVE_PERMALINK);
                 $propbag->add('description', PLUGIN_CUSTOMARCHIVE_PERMALINK_BLAHBLAH);
                 $propbag->add('default',     $serendipity['rewrite'] != 'none'
-                                             ? $serendipity['serendipityHTTPPath'] . 'pages/archives.html'
-                                             : $serendipity['serendipityHTTPPath'] . $serendipity['indexFile'] . '?/pages/archives.html');
+                                             ? $serendipity['serendipityHTTPPath'] . 'sortarchiv'
+                                             : $serendipity['serendipityHTTPPath'] . $serendipity['indexFile'] . '?/sortarchiv');
                 break;
 
             case 'pagetitle':
@@ -201,8 +202,46 @@ class serendipity_event_customarchive extends serendipity_event {
 
         $entries = serendipity_fetchEntries($range, false, '', false, false, $sql_order);
         $pool = array();
+        $lang = '';
+        $urlparam = '';
+        
+        // set multilingual url parameters
+        $sortlangs = false;
+        $urlparam = false;
+        if (isset($serendipity['GET']['custom_sortlangs'])) {
+            $sortlangs =  $serendipity['GET']['custom_sortlangs'];
+            if ($sortlangs != $serendipity['lang']) {
+            // requested language is different from display language, force language selection by url param
+            $urlparam = 'serendipity[lang_selected]=' 
+                . serendipity_db_escape_string($sortlangs);  
+        }        
+        }
+        
         if (is_array($entries)) {
         foreach($entries AS $entry) {
+            
+            $entryTitle = '';
+            $entryLink = '';
+            $entryHTML = '';
+            
+            // multilingual plugin active: if GET custom_sortlangs !all then get multilingual_title_xx for every entry
+            if ($sortlangs && $sortlangs != $serendipity['default_lang']) {
+                
+                $entryTitle = $entry['properties']['multilingual_title_' . $sortlangs];
+                if (empty($entryTitle)) continue; // skip untranslated article
+                
+                $entryLink = $serendipity['serendipityHTTPPath'] . $serendipity['indexFile'] . '?/' 
+                            . serendipity_archiveURL(
+                                $entry['id'], 
+                                $entryTitle, 
+                                'serendipityHTTPPath', 
+                                false)
+                            . '&amp;' . $urlparam;
+                $entryHTML = '<a href="' . $entryLink . '" title="' . (function_exists('serendipity_specialchars') ? serendipity_specialchars($entryTitle) : htmlspecialchars($entryTitle, ENT_COMPAT, LANG_CHARSET)) . '">' . $entryTitle . '</a><br />';
+                
+            } else {
+                // without multilingual plugin or blog entries in default language
+                $entryTitle = $entry['title'];
             $entryLink = serendipity_archiveURL(
                            $entry['id'],
                            $entry['title'],
@@ -210,8 +249,10 @@ class serendipity_event_customarchive extends serendipity_event {
                            true,
                            array('timestamp' => $entry['timestamp'])
                         );
-
+                if ($urlparam) $entryLink .= '&amp;' . $urlparam; // force default language
             $entryHTML = '<a href="' . $entryLink . '" title="' . (function_exists('serendipity_specialchars') ? serendipity_specialchars($entry['title']) : htmlspecialchars($entry['title'], ENT_COMPAT, LANG_CHARSET)) . '">' . $entry['title'] . '</a><br />';
+            }
+            
             $key       = '';
 
             switch($serendipity['GET']['custom_sortfield']) {
@@ -221,6 +262,7 @@ class serendipity_event_customarchive extends serendipity_event {
                     } else {
                         $key = $entry['category_name'];
                     }
+                    serendipity_plugin_api::hook_event('multilingual_strip_langs',$key);
                     break;
 
                 case 'timestamp':
@@ -228,7 +270,7 @@ class serendipity_event_customarchive extends serendipity_event {
                     break;
 
                 case 'title':
-                    $key = strtoupper(substr($entry['title'], 0, 1));
+                    $key = strtoupper(substr($entryTitle, 0, 1));
                     break;
             }
 
@@ -236,6 +278,9 @@ class serendipity_event_customarchive extends serendipity_event {
         }
         }
 
+        if (count($pool) == 0) {
+            echo PLUGIN_CUSTOMARCHIVE_EMPTY;
+        } else {
 
         foreach($pool AS $key => $content) {
             echo '<dl>';
@@ -245,6 +290,22 @@ class serendipity_event_customarchive extends serendipity_event {
             }
             echo '</dl>';
         }
+    }
+    }
+
+    function getUsedLanguages() {
+        global $serendipity;
+        $sql = "SELECT property FROM {$serendipity['dbPrefix']}entryproperties WHERE property LIKE 'multilingual_title%'";
+        $entries = serendipity_db_query($sql,false,'assoc');
+        $langs = array();
+        foreach ($entries AS $entry) {
+            $lang = substr($entry['property'],19);
+            if (!in_array($lang,$langs)) {
+                $langs[] = $lang;
+            }
+        }
+        
+        return $langs;
     }
 
     function show() {
@@ -318,23 +379,53 @@ class serendipity_event_customarchive extends serendipity_event {
                 }
             }
 
+            $custom_sortlangs = array();
+            $custom_sortlangs[] = array('value' => $serendipity['default_lang'], 'desc' => $serendipity['languages'][$serendipity['default_lang']]);
+            $langs = $this->getUsedLanguages();
+            if (is_array($langs)) {
+                foreach($langs AS $lang) {
+                    $custom_sortlangs[] = array('value' => $lang, 'desc' => $serendipity['languages'][$lang]);
+                }
+            }
+            
+
             $this->setDefaultValue('custom_sortfield', $custom_sortfield, 'timestamp');
             $this->setDefaultValue('custom_sortorder', $custom_sortorder, 'asc');
             $this->setDefaultValue('custom_sortyears', $custom_sortyears, date('Y'));
             $this->setDefaultValue('custom_sortauthors', $custom_sortauthors, 'all');
+            if ($serendipity['lang'] != $serendipity['default_lang']) {
+                $this->setDefaultValue('custom_sortlangs', $custom_sortlangs, $serendipity['lang']);
+            } else {
+                $this->setDefaultValue('custom_sortlangs', $custom_sortlangs, $serendipity['default_lang']);
+            }
 
 ?>
 <form action="<?php echo $serendipity['baseURL']; ?>index.php?" method="get">
-<p>
     <input type="hidden" name="serendipity[subpage]" value="<?php echo $page; ?>" />
-<?php echo SORT_BY; ?><br />
+<h6 style='margin-bottom:0.5em;'><?php echo PLUGIN_CUSTOMARCHIVE_SELECT . '<br />'; ?></h6>
+<div style='display:table-row'>
+<span style='display:table-cell; padding-right:1em;padding-top:0.2em'><?php echo PLUGIN_CUSTOMARCHIVE_YEAR; ?></span>
+<span style='display:table-cell'><?php echo $this->dropdown('custom_sortyears', $custom_sortyears); ?></span>
+</div>
+<div style='display:table-row'>
+<span style='display:table-cell; padding-right:1em;padding-top:0.2em'><?php echo PLUGIN_CUSTOMARCHIVE_AUTHOR; ?></span>
+<span style='display:table-cell'><?php echo $this->dropdown('custom_sortauthors', $custom_sortauthors); ?></span>
+</div>
+<?php if (count($custom_sortlangs) > 1) { ?>
+<div style='display:table-row'>
+<span style='display:table-cell; padding-right:1em;padding-top:0.2em'><?php echo PLUGIN_CUSTOMARCHIVE_LANGUAGE; ?></span>
+<span style='display:table-cell'><?php echo $this->dropdown('custom_sortlangs', $custom_sortlangs); ?></span>
+</div><?php } ?>
+<h6 style='margin-bottom:0.5em;margin-top:1em;'><?php echo SORT_BY; ?></h6>
+<p>
 <?php echo $this->dropdown('custom_sortfield', $custom_sortfield); ?>
-<?php echo $this->dropdown('custom_sortorder', $custom_sortorder); ?>
-<?php echo $this->dropdown('custom_sortyears', $custom_sortyears); ?>
-<?php echo $this->dropdown('custom_sortauthors', $custom_sortauthors); ?>
+<?php echo '&nbsp;&nbsp;' . $this->dropdown('custom_sortorder', $custom_sortorder); ?>
+</p>
+<p>
     <input type="submit" name="submit" value="<?php echo GO; ?>" />
 </p>
 </form>
+<hr />
 <?php
 
             $this->showEntries();
@@ -596,11 +687,6 @@ class serendipity_event_customarchive extends serendipity_event {
             switch($event) {
                 case 'genpage':
                     $args = implode('/', serendipity_getUriArguments($eventData, true));
-                    if ($serendipity['rewrite'] != 'none') {
-                        $nice_url = $serendipity['serendipityHTTPPath'] . $args;
-                    } else {
-                        $nice_url = $serendipity['serendipityHTTPPath'] . $serendipity['indexFile'] . '?/' . $args;
-                    }
 
                     if ($this->selected()) {
                         $serendipity['head_title']    = $this->get_config('pagetitle');
@@ -608,7 +694,7 @@ class serendipity_event_customarchive extends serendipity_event {
                     }
 
                     if (empty($serendipity['GET']['subpage'])) {
-                        $serendipity['GET']['subpage'] = $nice_url;
+                        $serendipity['GET']['subpage'] = serendipity_rewriteURL($args, 'baseURL');
                     }
 
                     if (!is_object($serendipity['smarty'])) {
@@ -638,6 +724,11 @@ class serendipity_event_customarchive extends serendipity_event {
                     $this->show();
 
                     return true;
+                    break;
+
+                case 'frontend_fetchentries':
+                    // show all entries even if multilingual plugin is active and untranslated articles hidden
+                    if ($this->selected()) $addData['showAllLangs'] = true;
                     break;
 
                 default:
